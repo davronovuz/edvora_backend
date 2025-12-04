@@ -1,0 +1,11 @@
+-r base.txt
+
+# Production Server
+gunicorn==21.2.0
+uvicorn==0.25.0
+
+# Security
+django-secure==1.0.1
+
+# Monitoring
+sentry-sdk==1.39.1
