@@ -23,8 +23,6 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv(
 SHARED_APPS = [
     'django_tenants',
     'apps.shared',
-    'unfold',
-
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -340,14 +338,4 @@ LOGGING = {
             'propagate': False,
         },
     },
-}
-
-# =============================================================================
-# UNFOLD (Admin Panel Theme)
-# =============================================================================
-
-UNFOLD = {
-    "SITE_TITLE": "MarkazEdu",
-    "SITE_HEADER": "MarkazEdu",
-    "SITE_SYMBOL": "school",
 }
