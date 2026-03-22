@@ -1,5 +1,5 @@
 """
-Edvora - Main URLs (FINAL)
+MarkazEdu - Main URLs (FINAL)
 """
 
 from django.contrib import admin
@@ -9,7 +9,7 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('panel-d97/', admin.site.urls),
 
     # API v1
     path('api/v1/', include('apps.users.urls')),

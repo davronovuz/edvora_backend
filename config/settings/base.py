@@ -23,6 +23,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv(
 SHARED_APPS = [
     'django_tenants',
     'apps.shared',
+    'jazzmin',
 
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -261,7 +262,7 @@ CORS_ALLOW_HEADERS = [
 # =============================================================================
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Edvora API',
+    'TITLE': 'MarkazEdu API',
     'DESCRIPTION': "O'quv markazlar uchun CRM API",
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -338,5 +339,83 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+    },
+}
+
+# =============================================================================
+# JAZZMIN (Admin Panel Theme)
+# =============================================================================
+
+JAZZMIN_SETTINGS = {
+    "site_title": "MarkazEdu Admin",
+    "site_header": "MarkazEdu",
+    "site_brand": "MarkazEdu",
+    "site_logo": None,
+    "login_logo": None,
+    "welcome_sign": "MarkazEdu Boshqaruv Paneli",
+    "copyright": "MarkazEdu",
+    "search_model": ["users.User", "students.Student"],
+    "topmenu_links": [
+        {"name": "Saytga o'tish", "url": "/", "new_window": True},
+        {"name": "API Docs", "url": "/api/docs/", "new_window": True},
+    ],
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "users.User": "fas fa-user",
+        "students.Student": "fas fa-user-graduate",
+        "teachers.Teacher": "fas fa-chalkboard-teacher",
+        "courses.Course": "fas fa-book",
+        "groups.Group": "fas fa-users",
+        "rooms.Room": "fas fa-door-open",
+        "attendance.Attendance": "fas fa-clipboard-check",
+        "payments.Payment": "fas fa-money-bill-wave",
+        "finance.Expense": "fas fa-file-invoice-dollar",
+        "leads.Lead": "fas fa-funnel-dollar",
+        "leads.DemoRequest": "fas fa-envelope-open-text",
+        "notifications.Notification": "fas fa-bell",
+        "exams.Exam": "fas fa-file-alt",
+        "branches.Branch": "fas fa-building",
+        "shared.Tenant": "fas fa-server",
+        "shared.Domain": "fas fa-globe",
+    },
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-primary",
+    "accent": "accent-primary",
+    "navbar": "navbar-dark navbar-primary",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "flatly",
+    "dark_mode_theme": "darkly",
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
     },
 }

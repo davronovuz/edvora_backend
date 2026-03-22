@@ -13,8 +13,8 @@ X_FRAME_OPTIONS = 'DENY'
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False  # HTTP uchun (SSL bo'lganda True qiling)
+CSRF_COOKIE_SECURE = False     # HTTP uchun (SSL bo'lganda True qiling)
 SECURE_SSL_REDIRECT = False  # Nginx handles SSL
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -29,6 +29,9 @@ CORS_ALLOWED_ORIGINS = config(
 CSRF_TRUSTED_ORIGINS = [
     'https://markazedu.uz',
     'https://www.markazedu.uz',
+    'http://markazedu.uz',
+    'http://www.markazedu.uz',
+    'http://144.91.118.72',
 ]
 
 # Cache with Redis
