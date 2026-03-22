@@ -69,3 +69,4 @@ coverage.xml
 # OS
 .DS_Store
 Thumbs.db.env.production
+.env.production
