@@ -16,7 +16,7 @@ def home(request):
 
 urlpatterns = [
     path('', home, name='home'),
-    path('admin/', admin.site.urls),
+    path('panel-d97/', admin.site.urls),
     path('api/v1/demo-requests/', DemoRequestViewSet.as_view({
         'post': 'create',
         'get': 'list',
