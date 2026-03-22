@@ -382,7 +382,7 @@ JAZZMIN_SETTINGS = {
     },
     "default_icon_parents": "fas fa-folder",
     "default_icon_children": "fas fa-circle",
-    "custom_css": None,
+    "custom_css": "admin/css/custom_admin.css",
     "custom_js": None,
     "use_google_fonts_cdn": True,
     "show_ui_builder": False,
