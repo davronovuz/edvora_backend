@@ -23,6 +23,8 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv(
 SHARED_APPS = [
     'django_tenants',
     'apps.shared',
+    'jazzmin',
+
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -337,5 +339,182 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+    },
+}
+
+# =============================================================================
+# JAZZMIN (Admin Panel Theme)
+# =============================================================================
+
+JAZZMIN_SETTINGS = {
+    # Oyna sarlavhasi
+    "site_title": "MarkazEdu Admin",
+    "site_header": "MarkazEdu",
+    "site_brand": "MarkazEdu",
+
+    # Login sahifasi
+    "welcome_sign": "Boshqaruv paneliga xush kelibsiz",
+    "copyright": "MarkazEdu © 2025",
+
+    # Yuqori menyu
+    "topmenu_links": [
+        {"name": "Bosh sahifa", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Saytga o'tish", "url": "/", "new_window": True},
+        {"model": "users.User"},
+    ],
+
+    # Foydalanuvchi menyusi (o'ng yuqori)
+    "usermenu_links": [
+        {"name": "Saytga o'tish", "url": "/", "new_window": True, "icon": "fas fa-external-link-alt"},
+    ],
+
+    # Sidebar
+    "show_sidebar": True,
+    "navigation_expanded": True,
+
+    # Keraksiz modellarni yashirish
+    "hide_apps": [],
+    "hide_models": [],
+
+    # App va model ikonkalari (Font Awesome 5)
+    "icons": {
+        # Django auth
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+
+        # Foydalanuvchilar
+        "users": "fas fa-users",
+        "users.User": "fas fa-user-circle",
+
+        # Talabalar
+        "students": "fas fa-user-graduate",
+        "students.Student": "fas fa-user-graduate",
+        "students.Tag": "fas fa-tags",
+
+        # O'qituvchilar
+        "teachers": "fas fa-chalkboard-teacher",
+        "teachers.Teacher": "fas fa-chalkboard-teacher",
+
+        # Kurslar
+        "courses": "fas fa-book",
+        "courses.Course": "fas fa-book-open",
+
+        # Guruhlar
+        "groups": "fas fa-users",
+        "groups.Group": "fas fa-layer-group",
+
+        # Xonalar
+        "rooms": "fas fa-door-open",
+        "rooms.Room": "fas fa-door-open",
+
+        # Davomat
+        "attendance": "fas fa-clipboard-check",
+        "attendance.Attendance": "fas fa-clipboard-list",
+        "attendance.Holiday": "fas fa-calendar-day",
+
+        # To'lovlar
+        "payments": "fas fa-money-bill-wave",
+        "payments.Payment": "fas fa-credit-card",
+
+        # Moliya
+        "finance": "fas fa-chart-line",
+        "finance.Expense": "fas fa-file-invoice-dollar",
+
+        # Lidlar
+        "leads": "fas fa-funnel-dollar",
+        "leads.Lead": "fas fa-user-plus",
+        "leads.DemoRequest": "fas fa-envelope-open-text",
+
+        # Bildirishnomalar
+        "notifications": "fas fa-bell",
+        "notifications.Notification": "fas fa-bell",
+
+        # Imtihonlar
+        "exams": "fas fa-file-alt",
+        "exams.Exam": "fas fa-file-alt",
+
+        # Analitika
+        "analytics": "fas fa-chart-pie",
+
+        # Filiallar
+        "branches": "fas fa-building",
+        "branches.Branch": "fas fa-building",
+
+        # Audit
+        "audit": "fas fa-history",
+
+        # Tenant
+        "shared": "fas fa-server",
+        "shared.Tenant": "fas fa-server",
+        "shared.Domain": "fas fa-globe",
+    },
+
+    # Default ikonkalar
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+
+    # Related modal (tez qo'shish)
+    "related_modal_active": True,
+
+    # Qo'shimcha
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+
+    # Sidebar tartib
+    "order_with_respect_to": [
+        "users",
+        "students",
+        "teachers",
+        "courses",
+        "groups",
+        "rooms",
+        "attendance",
+        "payments",
+        "finance",
+        "leads",
+        "notifications",
+        "exams",
+        "analytics",
+        "branches",
+        "audit",
+        "auth",
+    ],
+
+    # Form ko'rinishi
+    "changeform_format": "horizontal_tabs",
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": True,
+    "brand_small_text": False,
+    "brand_colour": "navbar-success",
+    "accent": "accent-success",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": True,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-success",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
     },
 }
