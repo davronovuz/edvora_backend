@@ -14,14 +14,17 @@ from django.utils import timezone
 from core.permissions import RoleBasedPermission
 from apps.students.models import Student
 from apps.groups.models import GroupStudent
-from .models import Lead, LeadActivity
+from rest_framework.permissions import AllowAny
+from .models import Lead, LeadActivity, DemoRequest
 from .serializers import (
     LeadListSerializer,
     LeadSerializer,
     LeadCreateSerializer,
     LeadActivitySerializer,
     LeadActivityCreateSerializer,
-    LeadConvertSerializer
+    LeadConvertSerializer,
+    DemoRequestSerializer,
+    DemoRequestListSerializer,
 )
 
 
@@ -294,3 +297,43 @@ class LeadActivityViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return LeadActivityCreateSerializer
         return LeadActivitySerializer
+
+
+class DemoRequestViewSet(viewsets.ModelViewSet):
+    """
+    Demo so'rovlar
+    - POST /api/v1/demo-requests/ (public - autentifikatsiyasiz)
+    - GET /api/v1/demo-requests/ (admin only)
+    """
+    queryset = DemoRequest.objects.all()
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['status']
+    search_fields = ['name', 'phone', 'center_name']
+    ordering = ['-created_at']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated(), RoleBasedPermission()]
+
+    role_permissions = {
+        'list': ['owner', 'admin'],
+        'retrieve': ['owner', 'admin'],
+        'update': ['owner', 'admin'],
+        'partial_update': ['owner', 'admin'],
+        'destroy': ['owner'],
+    }
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return DemoRequestSerializer
+        return DemoRequestListSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({
+            'success': True,
+            'message': "So'rovingiz qabul qilindi!"
+        }, status=status.HTTP_201_CREATED)

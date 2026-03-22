@@ -16,6 +16,16 @@ class Teacher(BaseModel):
         INACTIVE = 'inactive', 'Faol emas'
         ON_LEAVE = 'on_leave', 'Ta\'tilda'
 
+    # Filial
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='teachers',
+        verbose_name="Filial"
+    )
+
     # User bilan bog'lanish (agar tizimga kirsa)
     user = models.OneToOneField(
         'users.User',

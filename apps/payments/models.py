@@ -366,3 +366,64 @@ class Discount(BaseModel):
         if self.discount_type == self.DiscountType.PERCENT:
             return amount * (self.value / 100)
         return min(self.value, amount)
+
+
+class WriteOff(BaseModel):
+    """
+    Oylik yechib olish logi
+    Har oy avtomatik GroupStudent.balance dan yechib olinadi
+    """
+
+    student = models.ForeignKey(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='write_offs',
+        verbose_name="O'quvchi"
+    )
+    group = models.ForeignKey(
+        'groups.Group',
+        on_delete=models.CASCADE,
+        related_name='write_offs',
+        verbose_name="Guruh"
+    )
+    group_student = models.ForeignKey(
+        'groups.GroupStudent',
+        on_delete=models.CASCADE,
+        related_name='write_offs',
+        verbose_name="Guruh-O'quvchi"
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Yechib olingan summa"
+    )
+
+    # Qaysi oy uchun
+    period_month = models.PositiveIntegerField(
+        verbose_name="Oy (1-12)"
+    )
+    period_year = models.PositiveIntegerField(
+        verbose_name="Yil"
+    )
+
+    # Balans holati
+    balance_before = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Oldingi balans"
+    )
+    balance_after = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Keyingi balans"
+    )
+
+    class Meta:
+        verbose_name = "Yechib olish"
+        verbose_name_plural = "Yechib olishlar"
+        ordering = ['-created_at']
+        unique_together = ['group_student', 'period_month', 'period_year']
+
+    def __str__(self):
+        return f"{self.student.full_name} - {self.group.name} - {self.amount:,.0f} ({self.period_month}/{self.period_year})"

@@ -15,13 +15,14 @@ from datetime import datetime, timedelta
 from core.permissions import RoleBasedPermission
 from apps.groups.models import Group, GroupStudent
 from apps.students.models import Student
-from .models import Attendance, AttendanceSession
+from .models import Attendance, AttendanceSession, Holiday
 from .serializers import (
     AttendanceSerializer,
     AttendanceCreateSerializer,
     BulkAttendanceSerializer,
     AttendanceSessionSerializer,
-    AttendanceReportSerializer
+    AttendanceReportSerializer,
+    HolidaySerializer,
 )
 
 
@@ -48,6 +49,21 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         'by_student': ['owner', 'admin', 'teacher', 'accountant'],
         'report': ['owner', 'admin', 'teacher'],
     }
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.role == 'teacher' and hasattr(user, 'teacher_profile'):
+            qs = qs.filter(group__teacher=user.teacher_profile)
+        return qs
+
+    def _check_teacher_group_access(self, group):
+        """Teacher faqat o'z guruhiga access olsin"""
+        user = self.request.user
+        if user.role == 'teacher':
+            if not hasattr(user, 'teacher_profile') or group.teacher_id != user.teacher_profile.id:
+                return False
+        return True
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -82,6 +98,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         attendances_data = serializer.validated_data['attendances']
 
         group = get_object_or_404(Group, id=group_id)
+
+        if not self._check_teacher_group_access(group):
+            return Response({
+                'success': False,
+                'error': {'code': 'FORBIDDEN', 'message': 'Bu guruhga davomat qo\'yish huquqingiz yo\'q'}
+            }, status=status.HTTP_403_FORBIDDEN)
 
         created_count = 0
         updated_count = 0
@@ -142,6 +164,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         group = get_object_or_404(Group, id=group_id)
+
+        if not self._check_teacher_group_access(group):
+            return Response({
+                'success': False,
+                'error': {'code': 'FORBIDDEN', 'message': 'Bu guruhga kirish huquqingiz yo\'q'}
+            }, status=status.HTTP_403_FORBIDDEN)
 
         # Guruhdagi barcha o'quvchilar
         group_students = GroupStudent.objects.filter(
@@ -252,6 +280,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         group = get_object_or_404(Group, id=group_id)
 
+        if not self._check_teacher_group_access(group):
+            return Response({
+                'success': False,
+                'error': {'code': 'FORBIDDEN', 'message': 'Bu guruhga kirish huquqingiz yo\'q'}
+            }, status=status.HTTP_403_FORBIDDEN)
+
         # Guruhdagi o'quvchilar
         group_students = GroupStudent.objects.filter(
             group=group,
@@ -295,4 +329,81 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 },
                 'report': report
             }
+        })
+
+
+class HolidayViewSet(viewsets.ModelViewSet):
+    """
+    Dam olish kunlari CRUD
+    """
+    queryset = Holiday.objects.all()
+    serializer_class = HolidaySerializer
+    permission_classes = [IsAuthenticated, RoleBasedPermission]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['holiday_type', 'is_active']
+    ordering = ['date']
+
+    role_permissions = {
+        'list': ['owner', 'admin', 'teacher', 'accountant', 'registrar'],
+        'retrieve': ['owner', 'admin', 'teacher', 'accountant', 'registrar'],
+        'create': ['owner', 'admin'],
+        'update': ['owner', 'admin'],
+        'partial_update': ['owner', 'admin'],
+        'destroy': ['owner'],
+        'check_date': ['owner', 'admin', 'teacher'],
+        'upcoming': ['owner', 'admin', 'teacher', 'accountant', 'registrar'],
+    }
+
+    @action(detail=False, methods=['get'], url_path='check-date')
+    def check_date(self, request):
+        """
+        Berilgan sana dam olish kuniga to'g'ri keladimi tekshirish
+
+        GET /api/v1/holidays/check-date/?date=2026-03-21
+        """
+        date_str = request.query_params.get('date')
+        if not date_str:
+            return Response({
+                'success': False,
+                'error': {'code': 'MISSING_PARAM', 'message': 'date kerak'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from datetime import datetime as dt
+        check_date = dt.strptime(date_str, '%Y-%m-%d').date()
+        is_holiday = Holiday.is_holiday(check_date)
+
+        holiday_name = None
+        if is_holiday:
+            from django.db.models import Q
+            holiday = Holiday.objects.filter(
+                is_active=True,
+                date__lte=check_date,
+            ).filter(
+                Q(end_date__gte=check_date) | Q(end_date__isnull=True, date=check_date)
+            ).first()
+            if holiday:
+                holiday_name = holiday.name
+
+        return Response({
+            'success': True,
+            'data': {
+                'date': date_str,
+                'is_holiday': is_holiday,
+                'holiday_name': holiday_name,
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """Kelayotgan dam olish kunlari"""
+        today = timezone.now().date()
+        holidays = Holiday.objects.filter(
+            is_active=True,
+            date__gte=today,
+        )[:20]
+
+        serializer = HolidaySerializer(holidays, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
         })

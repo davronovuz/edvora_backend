@@ -3,7 +3,7 @@ Edvora - Leads Serializers
 """
 
 from rest_framework import serializers
-from .models import Lead, LeadActivity
+from .models import Lead, LeadActivity, DemoRequest
 
 
 class LeadListSerializer(serializers.ModelSerializer):
@@ -113,6 +113,23 @@ class LeadActivityCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class DemoRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DemoRequest
+        fields = ['name', 'phone', 'center_name', 'message']
+
+
+class DemoRequestListSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = DemoRequest
+        fields = [
+            'id', 'name', 'phone', 'center_name', 'message',
+            'status', 'status_display', 'notes', 'created_at'
+        ]
 
 
 class LeadConvertSerializer(serializers.Serializer):

@@ -1,0 +1,14 @@
+__pycache__
+*.pyc
+.env
+.env.production
+.git
+.gitignore
+*.md
+venv
+.venv
+node_modules
+frontend_dist
+nginx
+docker-compose.yml
+Dockerfile

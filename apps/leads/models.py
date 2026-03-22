@@ -172,6 +172,40 @@ class Lead(BaseModel):
         return self.status == self.Status.CONVERTED
 
 
+class DemoRequest(BaseModel):
+    """
+    Demo so'rovi - Landing page dan kelgan so'rovlar
+    """
+
+    class Status(models.TextChoices):
+        NEW = 'new', 'Yangi'
+        CONTACTED = 'contacted', "Bog'lanildi"
+        DEMO_DONE = 'demo_done', 'Demo ko\'rsatildi'
+        CONVERTED = 'converted', 'Mijoz bo\'ldi'
+        REJECTED = 'rejected', 'Rad etildi'
+
+    name = models.CharField(max_length=200, verbose_name="Ism")
+    phone = models.CharField(max_length=20, verbose_name="Telefon")
+    center_name = models.CharField(
+        max_length=200, blank=True, null=True,
+        verbose_name="O'quv markaz nomi"
+    )
+    message = models.TextField(blank=True, null=True, verbose_name="Xabar")
+    status = models.CharField(
+        max_length=20, choices=Status.choices,
+        default=Status.NEW, verbose_name="Status"
+    )
+    notes = models.TextField(blank=True, null=True, verbose_name="Admin izohi")
+
+    class Meta:
+        verbose_name = "Demo so'rov"
+        verbose_name_plural = "Demo so'rovlar"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} - {self.phone}"
+
+
 class LeadActivity(BaseModel):
     """
     Lead faoliyati

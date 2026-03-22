@@ -50,12 +50,16 @@ TENANT_APPS = [
     'apps.teachers',
     'apps.courses',
     'apps.groups',
+    'apps.rooms',
     'apps.attendance',
     'apps.payments',
     'apps.finance',
     'apps.leads',
     'apps.notifications',
     'apps.analytics',
+    'apps.exams',
+    'apps.audit',
+    'apps.branches',
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -70,14 +74,15 @@ TENANT_DOMAIN_MODEL = "shared.Domain"
 
 MIDDLEWARE = [
     'django_tenants.middleware.main.TenantMainMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.audit.middleware.AuditMiddleware',
 ]
 
 # =============================================================================
@@ -189,6 +194,15 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
     ],
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/minute',
+        'user': '200/minute',
+        'login': '5/minute',
+    },
 }
 
 # =============================================================================
@@ -214,15 +228,33 @@ SIMPLE_JWT = {
 }
 
 # =============================================================================
-# CORS
+# CORS - Development uchun barcha originlarga ruxsat
 # =============================================================================
 
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://127.0.0.1:3000',
-    cast=Csv()
-)
+CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 
 # =============================================================================
 # DRF SPECTACULAR (API Documentation)
@@ -251,13 +283,20 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
 # =============================================================================
+# ESKIZ SMS
+# =============================================================================
+
+ESKIZ_EMAIL = config('ESKIZ_EMAIL', default='')
+ESKIZ_PASSWORD = config('ESKIZ_PASSWORD', default='')
+ESKIZ_FROM = config('ESKIZ_FROM', default='4546')
+
+# =============================================================================
 # CACHING
 # =============================================================================
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/1'),
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 }
 

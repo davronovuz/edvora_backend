@@ -3,7 +3,7 @@ Edvora - Leads Admin
 """
 
 from django.contrib import admin
-from .models import Lead, LeadActivity
+from .models import Lead, LeadActivity, DemoRequest
 
 
 @admin.register(Lead)
@@ -42,3 +42,11 @@ class LeadActivityAdmin(admin.ModelAdmin):
     list_display = ['lead', 'activity_type', 'created_by', 'created_at']
     list_filter = ['activity_type', 'created_at']
     search_fields = ['lead__first_name', 'lead__last_name', 'description']
+
+
+@admin.register(DemoRequest)
+class DemoRequestAdmin(admin.ModelAdmin):
+    list_display = ['name', 'phone', 'center_name', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['name', 'phone', 'center_name']
+    date_hierarchy = 'created_at'

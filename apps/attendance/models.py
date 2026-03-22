@@ -133,3 +133,64 @@ class AttendanceSession(BaseModel):
         self.absent_count = attendances.filter(status='absent').count()
         self.late_count = attendances.filter(status='late').count()
         self.save()
+
+
+class Holiday(BaseModel):
+    """
+    Dam olish kunlari va bayramlar
+    Bu kunlarda darslar o'tkazilmaydi
+    """
+
+    class HolidayType(models.TextChoices):
+        NATIONAL = 'national', 'Davlat bayrami'
+        RELIGIOUS = 'religious', 'Diniy bayram'
+        CUSTOM = 'custom', 'Markaz dam olishi'
+
+    name = models.CharField(
+        max_length=200,
+        verbose_name="Nomi"
+    )
+    date = models.DateField(
+        verbose_name="Sana"
+    )
+    end_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="Tugash sanasi",
+        help_text="Bir necha kunlik bayramlar uchun"
+    )
+    holiday_type = models.CharField(
+        max_length=20,
+        choices=HolidayType.choices,
+        default=HolidayType.CUSTOM,
+        verbose_name="Turi"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Faol"
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Tavsif"
+    )
+
+    class Meta:
+        verbose_name = "Dam olish kuni"
+        verbose_name_plural = "Dam olish kunlari"
+        ordering = ['date']
+
+    def __str__(self):
+        if self.end_date:
+            return f"{self.name} ({self.date} - {self.end_date})"
+        return f"{self.name} ({self.date})"
+
+    @classmethod
+    def is_holiday(cls, check_date):
+        """Berilgan sana dam olish kuniga to'g'ri keladimi?"""
+        return cls.objects.filter(
+            is_active=True,
+            date__lte=check_date,
+        ).filter(
+            models.Q(end_date__gte=check_date) | models.Q(end_date__isnull=True, date=check_date)
+        ).exists()

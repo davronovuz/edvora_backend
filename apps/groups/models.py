@@ -17,6 +17,16 @@ class Group(BaseModel):
         COMPLETED = 'completed', 'Tugallangan'
         CANCELLED = 'cancelled', 'Bekor qilingan'
 
+    # Filial
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='groups',
+        verbose_name="Filial"
+    )
+
     # Asosiy
     name = models.CharField(
         max_length=100,
@@ -59,10 +69,12 @@ class Group(BaseModel):
     end_time = models.TimeField(
         verbose_name="Tugash vaqti"
     )
-    room = models.CharField(
-        max_length=50,
-        blank=True,
+    room = models.ForeignKey(
+        'rooms.Room',
+        on_delete=models.SET_NULL,
         null=True,
+        blank=True,
+        related_name='groups',
         verbose_name="Xona"
     )
 
@@ -131,6 +143,7 @@ class GroupStudent(BaseModel):
         COMPLETED = 'completed', 'Tugallagan'
         DROPPED = 'dropped', 'Chiqib ketgan'
         TRANSFERRED = 'transferred', 'Ko\'chirilgan'
+        FROZEN = 'frozen', 'Muzlatilgan'
 
     group = models.ForeignKey(
         Group,
@@ -183,6 +196,43 @@ class GroupStudent(BaseModel):
         verbose_name="Chegirma %"
     )
 
+    # Balans (guruh bo'yicha)
+    balance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Guruh balansi"
+    )
+
+    # Write-off (oylik yechib olish)
+    last_write_off_date = models.DateField(
+        blank=True, null=True,
+        verbose_name="Oxirgi yechib olish sanasi"
+    )
+    next_write_off_date = models.DateField(
+        blank=True, null=True,
+        verbose_name="Keyingi yechib olish sanasi"
+    )
+
+    # Istisno narx (vaqtinchalik)
+    exception_sum = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        blank=True, null=True,
+        verbose_name="Istisno summa"
+    )
+    exception_start_date = models.DateField(
+        blank=True, null=True,
+        verbose_name="Istisno boshi"
+    )
+    exception_end_date = models.DateField(
+        blank=True, null=True,
+        verbose_name="Istisno oxiri"
+    )
+    exception_reason = models.TextField(
+        blank=True, null=True,
+        verbose_name="Istisno sababi"
+    )
+
     class Meta:
         verbose_name = "Guruh o'quvchisi"
         verbose_name_plural = "Guruh o'quvchilari"
@@ -195,7 +245,20 @@ class GroupStudent(BaseModel):
     @property
     def monthly_price(self):
         """Oylik to'lov miqdori"""
-        if self.custom_price:
+        # Istisno narx tekshirish
+        if self.exception_sum is not None:
+            from django.utils import timezone
+            today = timezone.now().date()
+            if self.exception_start_date:
+                if self.exception_end_date:
+                    if self.exception_start_date <= today <= self.exception_end_date:
+                        return self.exception_sum
+                else:
+                    # End date yo'q = cheksiz istisno
+                    if self.exception_start_date <= today:
+                        return self.exception_sum
+
+        if self.custom_price is not None:
             return self.custom_price
 
         base_price = self.group.actual_price
@@ -204,3 +267,7 @@ class GroupStudent(BaseModel):
             return base_price - discount
 
         return base_price
+
+    @property
+    def is_debtor(self):
+        return self.balance < 0

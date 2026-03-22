@@ -12,12 +12,14 @@ class GroupListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     students_count = serializers.ReadOnlyField()
     days_display = serializers.SerializerMethodField()
+    branch_name = serializers.CharField(source='branch.name', read_only=True, default=None)
 
     class Meta:
         model = Group
         fields = [
             'id', 'name', 'course', 'course_name',
-            'teacher', 'teacher_name', 'status', 'status_display',
+            'teacher', 'teacher_name', 'branch', 'branch_name',
+            'status', 'status_display',
             'days', 'days_display', 'start_time', 'end_time', 'room',
             'students_count', 'max_students', 'start_date'
         ]
@@ -36,12 +38,14 @@ class GroupSerializer(serializers.ModelSerializer):
     students_count = serializers.ReadOnlyField()
     actual_price = serializers.ReadOnlyField()
     days_display = serializers.SerializerMethodField()
+    branch_name = serializers.CharField(source='branch.name', read_only=True, default=None)
 
     class Meta:
         model = Group
         fields = [
             'id', 'name', 'course', 'course_name',
             'teacher', 'teacher_name',
+            'branch', 'branch_name',
             'start_date', 'end_date',
             'days', 'days_display', 'start_time', 'end_time', 'room',
             'max_students', 'students_count',
@@ -62,7 +66,7 @@ class GroupCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = [
-            'name', 'course', 'teacher',
+            'name', 'course', 'teacher', 'branch',
             'start_date', 'end_date',
             'days', 'start_time', 'end_time', 'room',
             'max_students', 'status', 'price'
@@ -75,13 +79,23 @@ class GroupStudentSerializer(serializers.ModelSerializer):
     monthly_price = serializers.ReadOnlyField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
+    is_debtor = serializers.ReadOnlyField()
+
     class Meta:
         model = GroupStudent
         fields = [
             'id', 'student', 'student_name', 'student_phone',
             'is_active', 'status', 'status_display',
             'joined_date', 'left_date',
-            'custom_price', 'discount_percent', 'monthly_price'
+            'custom_price', 'discount_percent', 'monthly_price',
+            'balance', 'is_debtor',
+            'last_write_off_date', 'next_write_off_date',
+            'exception_sum', 'exception_start_date', 'exception_end_date',
+            'exception_reason',
+        ]
+        read_only_fields = [
+            'id', 'joined_date', 'balance',
+            'last_write_off_date', 'next_write_off_date',
         ]
 
 
@@ -89,3 +103,11 @@ class AddStudentToGroupSerializer(serializers.Serializer):
     student_id = serializers.UUIDField()
     custom_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=0)
+
+
+class TransferStudentSerializer(serializers.Serializer):
+    student_id = serializers.UUIDField()
+    target_group_id = serializers.UUIDField()
+    custom_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=0)
+    reason = serializers.CharField(required=False, allow_blank=True, default="")

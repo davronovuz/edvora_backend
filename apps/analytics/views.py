@@ -430,6 +430,9 @@ class ReportViewSet(viewsets.ViewSet):
         'finance_report': ['owner', 'accountant'],
         'attendance_report': ['owner', 'admin', 'teacher'],
         'teachers_report': ['owner', 'admin'],
+        'lead_conversion': ['owner', 'admin', 'registrar'],
+        'teacher_performance': ['owner', 'admin'],
+        'write_off_report': ['owner', 'admin', 'accountant'],
     }
 
     @action(detail=False, methods=['get'])
@@ -638,5 +641,193 @@ class ReportViewSet(viewsets.ViewSet):
             'data': {
                 'period': {'year': year, 'month': month},
                 'teachers': data
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def lead_conversion(self, request):
+        """
+        Lead konversiya hisoboti
+
+        GET /api/v1/analytics/reports/lead_conversion/?start_date=2024-01-01&end_date=2024-12-31
+        """
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        if not start_date or not end_date:
+            return Response({
+                'success': False,
+                'error': {'code': 'MISSING_PARAM', 'message': 'start_date va end_date kerak'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        leads = Lead.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date,
+        )
+
+        total = leads.count()
+        converted = leads.filter(status='converted').count()
+        lost = leads.filter(status='lost').count()
+        active = leads.filter(status__in=['new', 'contacted', 'trial']).count()
+
+        # Manba bo'yicha konversiya
+        by_source = leads.values('source').annotate(
+            total=Count('id'),
+            converted=Count('id', filter=Q(status='converted')),
+        )
+
+        source_data = []
+        for s in by_source:
+            rate = round((s['converted'] / s['total'] * 100) if s['total'] > 0 else 0, 1)
+            source_data.append({
+                'source': s['source'],
+                'total': s['total'],
+                'converted': s['converted'],
+                'conversion_rate': rate,
+            })
+
+        # O'rtacha konversiya vaqti (kun)
+        converted_leads = leads.filter(
+            status='converted',
+            converted_at__isnull=False,
+        )
+        avg_days = None
+        if converted_leads.exists():
+            from django.db.models import F, ExpressionWrapper, DurationField
+            durations = converted_leads.annotate(
+                duration=ExpressionWrapper(
+                    F('converted_at') - F('created_at'),
+                    output_field=DurationField()
+                )
+            )
+            avg_duration = durations.aggregate(avg=Avg('duration'))['avg']
+            if avg_duration:
+                avg_days = avg_duration.days
+
+        return Response({
+            'success': True,
+            'data': {
+                'period': {'start': start_date, 'end': end_date},
+                'summary': {
+                    'total_leads': total,
+                    'converted': converted,
+                    'lost': lost,
+                    'active': active,
+                    'conversion_rate': round((converted / total * 100) if total > 0 else 0, 1),
+                    'avg_conversion_days': avg_days,
+                },
+                'by_source': source_data,
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def teacher_performance(self, request):
+        """
+        O'qituvchi samaradorlik hisoboti
+
+        GET /api/v1/analytics/reports/teacher_performance/?start_date=2024-01-01&end_date=2024-06-30
+        """
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        if not start_date or not end_date:
+            return Response({
+                'success': False,
+                'error': {'code': 'MISSING_PARAM', 'message': 'start_date va end_date kerak'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        teachers = Teacher.objects.filter(status='active')
+
+        data = []
+        for teacher in teachers:
+            groups = Group.objects.filter(teacher=teacher, status='active')
+            group_ids = groups.values_list('id', flat=True)
+
+            # Faol o'quvchilar soni
+            active_students = GroupStudent.objects.filter(
+                group__in=groups,
+                is_active=True,
+            ).count()
+
+            # Chiqib ketganlar (dropped) soni
+            dropped_students = GroupStudent.objects.filter(
+                group__in=groups,
+                status='dropped',
+                left_date__gte=start_date,
+                left_date__lte=end_date,
+            ).count()
+
+            # Davomat foizi
+            attendances = Attendance.objects.filter(
+                group__in=groups,
+                date__gte=start_date,
+                date__lte=end_date,
+            )
+            att_total = attendances.count()
+            att_present = attendances.filter(status__in=['present', 'late']).count()
+            att_rate = round((att_present / att_total * 100) if att_total > 0 else 0, 1)
+
+            # Retention rate
+            total_ever = GroupStudent.objects.filter(group__in=groups).count()
+            retention = round((active_students / total_ever * 100) if total_ever > 0 else 0, 1)
+
+            data.append({
+                'teacher_id': str(teacher.id),
+                'teacher_name': teacher.full_name,
+                'groups_count': groups.count(),
+                'active_students': active_students,
+                'dropped_students': dropped_students,
+                'attendance_rate': att_rate,
+                'retention_rate': retention,
+            })
+
+        # Samaradorlik bo'yicha saralash
+        data.sort(key=lambda x: x['attendance_rate'], reverse=True)
+
+        return Response({
+            'success': True,
+            'data': {
+                'period': {'start': start_date, 'end': end_date},
+                'teachers': data,
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def write_off_report(self, request):
+        """
+        Write-off (yechib olish) hisoboti
+
+        GET /api/v1/analytics/reports/write_off_report/?year=2026&month=3
+        """
+        from apps.payments.models import WriteOff
+
+        year = int(request.query_params.get('year', timezone.now().year))
+        month = int(request.query_params.get('month', timezone.now().month))
+
+        write_offs = WriteOff.objects.filter(
+            period_year=year,
+            period_month=month,
+        ).select_related('student', 'group')
+
+        total_amount = write_offs.aggregate(total=Sum('amount'))['total'] or 0
+        total_count = write_offs.count()
+
+        # Guruh bo'yicha
+        by_group = write_offs.values(
+            'group__id', 'group__name'
+        ).annotate(
+            total=Sum('amount'),
+            count=Count('id'),
+        ).order_by('-total')
+
+        return Response({
+            'success': True,
+            'data': {
+                'period': {'year': year, 'month': month},
+                'summary': {
+                    'total_amount': total_amount,
+                    'total_count': total_count,
+                },
+                'by_group': list(by_group),
             }
         })

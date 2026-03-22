@@ -3,7 +3,7 @@ Edvora - Attendance Serializers
 """
 
 from rest_framework import serializers
-from .models import Attendance, AttendanceSession
+from .models import Attendance, AttendanceSession, Holiday
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -70,3 +70,17 @@ class AttendanceReportSerializer(serializers.Serializer):
     absent_days = serializers.IntegerField()
     late_days = serializers.IntegerField()
     attendance_rate = serializers.FloatField()
+
+
+class HolidaySerializer(serializers.ModelSerializer):
+    holiday_type_display = serializers.CharField(source='get_holiday_type_display', read_only=True)
+
+    class Meta:
+        model = Holiday
+        fields = [
+            'id', 'name', 'date', 'end_date',
+            'holiday_type', 'holiday_type_display',
+            'is_active', 'description',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
