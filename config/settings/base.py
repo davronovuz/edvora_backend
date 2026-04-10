@@ -60,6 +60,7 @@ TENANT_APPS = [
     'apps.attendance',
     'apps.payments',
     'apps.finance',
+    'apps.billing',
     'apps.leads',
     'apps.notifications',
     'apps.analytics',
