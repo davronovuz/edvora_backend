@@ -19,6 +19,7 @@ from apps.payments.models import Payment
 from apps.finance.models import Expense, Salary
 from apps.attendance.models import Attendance
 from apps.leads.models import Lead
+from apps.billing.models import Invoice
 from .models import DailyStats, MonthlyStats
 from .serializers import (
     DailyStatsSerializer,
@@ -42,6 +43,9 @@ class DashboardViewSet(viewsets.ViewSet):
         'recent_activity': ['owner', 'admin'],
         'top_groups': ['owner', 'admin'],
         'debtors_summary': ['owner', 'admin', 'accountant'],
+        'billing_chart': ['owner', 'admin', 'accountant'],
+        'billing_debtors': ['owner', 'admin', 'accountant'],
+        'billing_summary': ['owner', 'admin', 'accountant'],
     }
 
     @action(detail=False, methods=['get'])
@@ -102,6 +106,20 @@ class DashboardViewSet(viewsets.ViewSet):
             (attendance_present / attendance_total * 100) if attendance_total > 0 else 0, 1
         )
 
+        # Billing (yangi invoice tizimi)
+        billing_qs = Invoice.objects.filter(
+            period_year=today.year, period_month=today.month,
+        ).exclude(status=Invoice.Status.CANCELLED)
+
+        billing_expected = billing_qs.aggregate(s=Sum('total_amount'))['s'] or Decimal('0')
+        billing_collected = billing_qs.aggregate(s=Sum('paid_amount'))['s'] or Decimal('0')
+        billing_overdue = Invoice.objects.filter(
+            status=Invoice.Status.OVERDUE,
+        ).count()
+        billing_collection_rate = round(
+            float(billing_collected / billing_expected * 100) if billing_expected > 0 else 0, 1
+        )
+
         return Response({
             'success': True,
             'data': {
@@ -124,6 +142,13 @@ class DashboardViewSet(viewsets.ViewSet):
                     'expense': expense,
                     'salary': salary,
                     'profit': income - expense - salary
+                },
+                'billing': {
+                    'expected': billing_expected,
+                    'collected': billing_collected,
+                    'debt': billing_expected - billing_collected,
+                    'collection_rate': billing_collection_rate,
+                    'overdue_count': billing_overdue,
                 },
                 'leads': {
                     'total': leads_total,
@@ -415,6 +440,186 @@ class DashboardViewSet(viewsets.ViewSet):
                 'total_debtors': debtors.count(),
                 'total_debt': abs(total_debt),
                 'by_range': by_range
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def billing_chart(self, request):
+        """
+        Billing dinamikasi (oxirgi 12 oy) — Invoice asosida.
+
+        GET /api/v1/analytics/dashboard/billing_chart/
+        """
+        from django.db.models import F
+
+        today = timezone.now().date()
+        labels = []
+        expected_data = []
+        collected_data = []
+        debt_data = []
+
+        for i in range(11, -1, -1):
+            if today.month - i > 0:
+                year = today.year
+                month = today.month - i
+            else:
+                year = today.year - 1
+                month = today.month - i + 12
+
+            labels.append(f"{month:02d}/{year}")
+
+            qs = Invoice.objects.filter(
+                period_year=year, period_month=month,
+            ).exclude(status=Invoice.Status.CANCELLED)
+
+            agg = qs.aggregate(
+                expected=Sum('total_amount'),
+                collected=Sum('paid_amount'),
+            )
+            expected = float(agg['expected'] or 0)
+            collected = float(agg['collected'] or 0)
+
+            expected_data.append(expected)
+            collected_data.append(collected)
+            debt_data.append(expected - collected)
+
+        return Response({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'datasets': [
+                    {'label': 'Kutilayotgan', 'data': expected_data},
+                    {'label': 'Yig\'ilgan', 'data': collected_data},
+                    {'label': 'Qarz', 'data': debt_data},
+                ]
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def billing_debtors(self, request):
+        """
+        Invoice-based qarzdorlar (batafsil).
+
+        GET /api/v1/analytics/dashboard/billing_debtors/
+        """
+        from django.db.models import F
+
+        debtors = (
+            Invoice.objects
+            .filter(status__in=[
+                Invoice.Status.UNPAID,
+                Invoice.Status.PARTIAL,
+                Invoice.Status.OVERDUE,
+            ])
+            .values(
+                'student__id', 'student__first_name', 'student__last_name',
+                'student__phone',
+            )
+            .annotate(
+                total_debt=Sum(F('total_amount') - F('paid_amount')),
+                invoice_count=Count('id'),
+                overdue_count=Count('id', filter=Q(status=Invoice.Status.OVERDUE)),
+            )
+            .filter(total_debt__gt=0)
+            .order_by('-total_debt')[:50]
+        )
+
+        # Umumiy statistika
+        total_debt = sum(d['total_debt'] for d in debtors)
+        total_debtors = len(debtors)
+
+        # Qarz diapazonlari
+        ranges = [
+            {'min': 0, 'max': 500000, 'label': '0 - 500K'},
+            {'min': 500000, 'max': 1000000, 'label': '500K - 1M'},
+            {'min': 1000000, 'max': 2000000, 'label': '1M - 2M'},
+            {'min': 2000000, 'max': None, 'label': '2M+'},
+        ]
+        by_range = []
+        for r in ranges:
+            count = sum(
+                1 for d in debtors
+                if d['total_debt'] >= r['min']
+                and (r['max'] is None or d['total_debt'] < r['max'])
+            )
+            by_range.append({'label': r['label'], 'count': count})
+
+        return Response({
+            'success': True,
+            'data': {
+                'total_debtors': total_debtors,
+                'total_debt': float(total_debt),
+                'by_range': by_range,
+                'debtors': list(debtors),
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def billing_summary(self, request):
+        """
+        Oylik billing xulosasi (batafsil).
+
+        GET /api/v1/analytics/dashboard/billing_summary/?year=2026&month=4
+        """
+        year = int(request.query_params.get('year', timezone.now().year))
+        month = int(request.query_params.get('month', timezone.now().month))
+
+        qs = Invoice.objects.filter(
+            period_year=year, period_month=month,
+        ).exclude(status=Invoice.Status.CANCELLED)
+
+        agg = qs.aggregate(
+            expected=Sum('total_amount'),
+            collected=Sum('paid_amount'),
+            discount=Sum('discount_amount'),
+            leave_credit=Sum('leave_credit_amount'),
+            late_fee=Sum('late_fee_amount'),
+            base=Sum('base_amount'),
+        )
+
+        total_expected = agg['expected'] or Decimal('0')
+        total_collected = agg['collected'] or Decimal('0')
+
+        # Status bo'yicha
+        by_status = {}
+        for s_value, s_label in Invoice.Status.choices:
+            if s_value == Invoice.Status.CANCELLED:
+                continue
+            cnt = qs.filter(status=s_value).count()
+            if cnt > 0:
+                by_status[s_value] = cnt
+
+        # Guruh bo'yicha top 10 qarzlar
+        from django.db.models import F
+        by_group = list(
+            qs.values('group__id', 'group__name')
+            .annotate(
+                group_expected=Sum('total_amount'),
+                group_collected=Sum('paid_amount'),
+                group_debt=Sum(F('total_amount') - F('paid_amount')),
+                student_count=Count('student', distinct=True),
+            )
+            .filter(group_debt__gt=0)
+            .order_by('-group_debt')[:10]
+        )
+
+        return Response({
+            'success': True,
+            'data': {
+                'period': f"{year}-{month:02d}",
+                'base_total': str(agg['base'] or 0),
+                'discount_total': str(agg['discount'] or 0),
+                'leave_credit_total': str(agg['leave_credit'] or 0),
+                'late_fee_total': str(agg['late_fee'] or 0),
+                'expected': str(total_expected),
+                'collected': str(total_collected),
+                'debt': str(total_expected - total_collected),
+                'collection_rate': round(
+                    float(total_collected / total_expected * 100)
+                    if total_expected > 0 else 0, 1
+                ),
+                'by_status': by_status,
+                'by_group': by_group,
             }
         })
 
