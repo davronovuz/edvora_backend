@@ -289,6 +289,32 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
+# Celery Beat Schedule — billing avtomatik vazifalar
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    # Har kuni 06:00 da — billing_day tekshirib invoice yaratish
+    'billing-generate-monthly': {
+        'task': 'apps.billing.tasks.generate_monthly_invoices',
+        'schedule': crontab(hour=6, minute=0),
+    },
+    # Har kuni 07:00 da — muddati o'tgan invoicelarni belgilash
+    'billing-check-overdue': {
+        'task': 'apps.billing.tasks.check_overdue_invoices',
+        'schedule': crontab(hour=7, minute=0),
+    },
+    # Har kuni 08:00 da — penya hisoblash
+    'billing-apply-late-fees': {
+        'task': 'apps.billing.tasks.apply_late_fees',
+        'schedule': crontab(hour=8, minute=0),
+    },
+    # Har kuni 09:00 da — to'lov muddati yaqinlashgan eslatma
+    'billing-due-reminders': {
+        'task': 'apps.billing.tasks.send_due_date_reminders',
+        'schedule': crontab(hour=9, minute=0),
+    },
+}
+
 # =============================================================================
 # ESKIZ SMS
 # =============================================================================
