@@ -150,7 +150,8 @@ class TestRegistry:
         assert isinstance(get_strategy(profile), PerLessonStrategy)
 
     def test_unimplemented_mode(self):
-        profile = make_profile(BillingProfile.Mode.PACKAGE)
+        # Sun'iy mode (registryda yo'q)
+        profile = BillingProfile(name="bad", mode="non_existent_mode")
         with pytest.raises(StrategyNotImplementedError):
             get_strategy(profile)
 

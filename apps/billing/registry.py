@@ -13,19 +13,26 @@ from typing import Dict, Type
 
 from .models import BillingProfile
 from .strategies.base import BaseBillingStrategy
+from .strategies.hourly import HourlyStrategy
 from .strategies.monthly_flat import MonthlyFlatStrategy
 from .strategies.monthly_prorated_days import MonthlyProratedDaysStrategy
+from .strategies.monthly_prorated_lessons import MonthlyProratedLessonsStrategy
+from .strategies.package import PackageStrategy
+from .strategies.per_attendance import PerAttendanceStrategy
 from .strategies.per_lesson import PerLessonStrategy
+from .strategies.subscription_freeze import SubscriptionFreezeStrategy
 
 
 # Mode -> Strategy klassi
 _STRATEGIES: Dict[str, Type[BaseBillingStrategy]] = {
     BillingProfile.Mode.MONTHLY_FLAT: MonthlyFlatStrategy,
     BillingProfile.Mode.MONTHLY_PRORATED_DAYS: MonthlyProratedDaysStrategy,
+    BillingProfile.Mode.MONTHLY_PRORATED_LESSONS: MonthlyProratedLessonsStrategy,
     BillingProfile.Mode.PER_LESSON: PerLessonStrategy,
-    # Stage 3 da qo'shiladi:
-    #   MONTHLY_PRORATED_LESSONS, PER_ATTENDANCE, PACKAGE,
-    #   HOURLY, SUBSCRIPTION_FREEZE
+    BillingProfile.Mode.PER_ATTENDANCE: PerAttendanceStrategy,
+    BillingProfile.Mode.PACKAGE: PackageStrategy,
+    BillingProfile.Mode.HOURLY: HourlyStrategy,
+    BillingProfile.Mode.SUBSCRIPTION_FREEZE: SubscriptionFreezeStrategy,
 }
 
 
