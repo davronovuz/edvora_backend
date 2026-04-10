@@ -21,7 +21,7 @@ class TestStudentTransfer:
         student = create_student()
 
         # Guruhga qo'shish
-        GroupStudent.objects.create(group=group1, student=student)
+        GroupStudent.objects.create(group=group1, student=student, joined_date=timezone.now().date())
 
         data = {
             'student_id': str(student.id),
@@ -48,7 +48,7 @@ class TestStudentTransfer:
         group2 = create_group(name='Group B', max_students=0)  # To'lgan
         student = create_student()
 
-        GroupStudent.objects.create(group=group1, student=student)
+        GroupStudent.objects.create(group=group1, student=student, joined_date=timezone.now().date())
 
         data = {
             'student_id': str(student.id),
@@ -80,7 +80,7 @@ class TestStudentTransfer:
         group2 = create_group(name='Group B')
         student = create_student()
 
-        GroupStudent.objects.create(group=group1, student=student)
+        GroupStudent.objects.create(group=group1, student=student, joined_date=timezone.now().date())
 
         data = {
             'student_id': str(student.id),

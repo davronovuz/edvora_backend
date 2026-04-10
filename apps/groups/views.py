@@ -105,6 +105,7 @@ class GroupViewSet(viewsets.ModelViewSet):
         gs = GroupStudent.objects.create(
             group=group,
             student=student,
+            joined_date=today,
             custom_price=serializer.validated_data.get('custom_price'),
             discount_percent=serializer.validated_data.get('discount_percent', 0),
             next_write_off_date=next_wo,
@@ -192,6 +193,7 @@ class GroupViewSet(viewsets.ModelViewSet):
         target_gs = GroupStudent.objects.create(
             group=target_group,
             student=student,
+            joined_date=tz.now().date(),
             custom_price=serializer.validated_data.get('custom_price'),
             discount_percent=serializer.validated_data.get('discount_percent', 0),
         )

@@ -3,6 +3,7 @@ Reports (Hisobotlar) Tests
 """
 
 import pytest
+from datetime import date
 from rest_framework import status
 
 
@@ -32,7 +33,7 @@ class TestReportsAPI:
 
         group = create_group()
         student = create_student()
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
 
         url = '/api/v1/analytics/reports/teacher_performance/?start_date=2026-01-01&end_date=2026-12-31'
         response = authenticated_client.get(url)

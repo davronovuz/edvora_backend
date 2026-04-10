@@ -58,7 +58,7 @@ class TestMonthlyInvoiceTask:
         """Faol o'quvchilar uchun invoice yaratish"""
         group = create_group()
         student = create_student()
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=timezone.now().date())
 
         result = generate_monthly_invoices()
         assert result['created'] == 1
@@ -71,7 +71,7 @@ class TestMonthlyInvoiceTask:
         """Bir oy uchun ikki marta invoice yaratilmasligi"""
         group = create_group()
         student = create_student()
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=timezone.now().date())
 
         generate_monthly_invoices()
         result = generate_monthly_invoices()  # Ikkinchi marta

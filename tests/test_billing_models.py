@@ -53,7 +53,7 @@ def group_student(create_student, create_group):
     from apps.groups.models import GroupStudent
     student = create_student()
     group = create_group()
-    return GroupStudent.objects.create(group=group, student=student)
+    return GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
 
 
 # =============================================================================
@@ -326,6 +326,7 @@ class TestInvoice:
         gs2 = GroupStudent.objects.create(
             group=group_student.group,
             student=create_student(first_name="Vali", phone="+998901112233"),
+            joined_date=date.today(),
         )
         inv2 = self._make_invoice(billing_profile, gs2)
         assert inv1.number != inv2.number

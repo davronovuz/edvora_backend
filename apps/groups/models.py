@@ -102,6 +102,17 @@ class Group(BaseModel):
         help_text="Bo'sh qolsa kurs narxi ishlatiladi"
     )
 
+    # Billing
+    billing_profile = models.ForeignKey(
+        'billing.BillingProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='groups',
+        verbose_name="Billing profili",
+        help_text="Bo'sh qolsa kurs yoki filial default ishlatiladi"
+    )
+
     class Meta:
         verbose_name = "Guruh"
         verbose_name_plural = "Guruhlar"
@@ -172,13 +183,24 @@ class GroupStudent(BaseModel):
 
     # Sanalar
     joined_date = models.DateField(
-        auto_now_add=True,
-        verbose_name="Qo'shilgan sana"
+        verbose_name="Qo'shilgan sana",
+        help_text="O'quvchi guruhga qo'shilgan sana (billing hisob-kitob uchun muhim)"
     )
     left_date = models.DateField(
         blank=True,
         null=True,
         verbose_name="Chiqib ketgan sana"
+    )
+
+    # Billing
+    billing_profile = models.ForeignKey(
+        'billing.BillingProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='group_students',
+        verbose_name="Billing profili (individual)",
+        help_text="Bo'sh qolsa guruh yoki filial default ishlatiladi"
     )
 
     # Maxsus narx (chegirma bo'lsa)

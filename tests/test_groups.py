@@ -3,6 +3,7 @@ Groups API Tests
 """
 
 import pytest
+from datetime import date
 from rest_framework import status
 
 
@@ -63,8 +64,8 @@ class TestGroupsAPI:
         student1 = create_student(phone='+998901111111')
         student2 = create_student(phone='+998902222222')
 
-        GroupStudent.objects.create(group=group, student=student1)
-        GroupStudent.objects.create(group=group, student=student2)
+        GroupStudent.objects.create(group=group, student=student1, joined_date=date.today())
+        GroupStudent.objects.create(group=group, student=student2, joined_date=date.today())
 
         url = f'/api/v1/groups/{group.id}/students/'
         response = authenticated_client.get(url)

@@ -7,9 +7,13 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from apps.shared.views import tenant_info
 
 urlpatterns = [
     path('panel-d97/', admin.site.urls),
+
+    # Tenant info (public - login sahifasi uchun)
+    path('api/v1/tenant-info/', tenant_info, name='tenant-info'),
 
     # API v1
     path('api/v1/', include('apps.users.urls')),
@@ -22,6 +26,7 @@ urlpatterns = [
     path('api/v1/holidays/', include('apps.attendance.urls_holidays')),
     path('api/v1/', include('apps.payments.urls')),
     path('api/v1/finance/', include('apps.finance.urls')),
+    path('api/v1/billing/', include('apps.billing.urls')),
     path('api/v1/', include('apps.leads.urls')),
     path('api/v1/', include('apps.notifications.urls')),
     path('api/v1/analytics/', include('apps.analytics.urls')),

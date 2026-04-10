@@ -145,30 +145,26 @@ class InvoiceService:
         GroupStudent uchun billing profile aniqlash.
 
         Iyerarxiya (yuqoridan pastga, birinchi topilgan qaytariladi):
-            1. GroupStudent o'ziga biriktirilgan (future: billing_profile FK)
-            2. Group'ga biriktirilgan
-            3. Course'ga biriktirilgan
-            4. Branch default
+            1. GroupStudent.billing_profile (individual override)
+            2. Group.billing_profile (guruh darajasi)
+            3. Course.billing_profile (kurs darajasi)
+            4. Branch default (filial is_default=True)
             5. Global default (branch=None, is_default=True)
         """
+        # 1. GroupStudent individual
+        if group_student.billing_profile_id:
+            return group_student.billing_profile
+
         group = group_student.group
 
         # 2. Group level
-        profile = BillingProfile.objects.filter(
-            extra_settings__group_id=str(group.pk),
-            is_active=True,
-        ).first()
-        if profile:
-            return profile
+        if group.billing_profile_id:
+            return group.billing_profile
 
         # 3. Course level
-        if group.course_id:
-            profile = BillingProfile.objects.filter(
-                extra_settings__course_id=str(group.course_id),
-                is_active=True,
-            ).first()
-            if profile:
-                return profile
+        if group.course_id and hasattr(group.course, 'billing_profile_id'):
+            if group.course.billing_profile_id:
+                return group.course.billing_profile
 
         # 4. Branch default
         if group.branch_id:

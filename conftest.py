@@ -164,7 +164,11 @@ def create_subject(db):
             'is_active': True,
         }
         defaults.update(kwargs)
-        return Subject.objects.create(**defaults)
+        obj, _ = Subject.objects.get_or_create(
+            slug=defaults.pop('slug'),
+            defaults=defaults,
+        )
+        return obj
 
     return make_subject
 

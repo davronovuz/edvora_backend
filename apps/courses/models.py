@@ -110,6 +110,17 @@ class Course(BaseModel):
         verbose_name="Faol"
     )
 
+    # Billing
+    billing_profile = models.ForeignKey(
+        'billing.BillingProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='courses',
+        verbose_name="Billing profili",
+        help_text="Bo'sh qolsa filial default ishlatiladi"
+    )
+
     class Meta:
         verbose_name = "Kurs"
         verbose_name_plural = "Kurslar"

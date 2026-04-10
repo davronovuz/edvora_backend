@@ -74,6 +74,7 @@ def april_group_student(april_group, create_student):
     return GroupStudent.objects.create(
         group=april_group,
         student=create_student(),
+        joined_date=date(2026, 4, 1),
         is_active=True,
         status='active',
     )

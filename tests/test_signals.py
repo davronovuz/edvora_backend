@@ -5,6 +5,7 @@ Payment -> Transaction, GroupStudent -> Notification, Expense -> Transaction
 
 import pytest
 from django.utils import timezone
+from datetime import date
 from decimal import Decimal
 from apps.payments.models import Payment
 from apps.finance.models import Transaction, Expense, ExpenseCategory, Salary
@@ -81,7 +82,7 @@ class TestGroupStudentSignals:
         group = create_group()
         student = create_student()
 
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
 
         notification = Notification.objects.filter(
             student=student, notification_type='group'
@@ -93,7 +94,7 @@ class TestGroupStudentSignals:
         """Guruhdan chiqarilganda notification yaratilishi"""
         group = create_group()
         student = create_student()
-        gs = GroupStudent.objects.create(group=group, student=student)
+        gs = GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
 
         # Chiqarish
         gs.status = 'dropped'

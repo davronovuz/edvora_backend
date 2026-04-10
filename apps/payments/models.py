@@ -135,13 +135,18 @@ class Payment(BaseModel):
             from core.utils.helpers import generate_invoice_number
             self.receipt_number = generate_invoice_number('PAY')
 
-        # Yangi to'lov bo'lsa, balansni yangilash
-        is_new = self.pk is None
+        # UUID model'da pk hech qachon None bo'lmaydi (default=uuid4).
+        # Shuning uchun DB dan borligini tekshiramiz.
+        is_new = not Payment.objects.filter(pk=self.pk).exists()
         old_status = None
 
         if not is_new:
-            old_payment = Payment.objects.get(pk=self.pk)
-            old_status = old_payment.status
+            old_status = (
+                Payment.objects
+                .filter(pk=self.pk)
+                .values_list('status', flat=True)
+                .first()
+            )
 
         super().save(*args, **kwargs)
 

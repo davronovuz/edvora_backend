@@ -48,7 +48,7 @@ class TestStudentModel:
         from apps.groups.models import GroupStudent
         student = create_student()
         group = create_group()
-        gs = GroupStudent.objects.create(group=group, student=student)
+        gs = GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
         assert gs.status == 'active'
 
         student.freeze(start_date=date.today())
@@ -70,7 +70,7 @@ class TestStudentModel:
         from apps.groups.models import GroupStudent
         student = create_student()
         group = create_group()
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
 
         student.freeze(start_date=date.today())
         student.unfreeze()
@@ -123,7 +123,7 @@ class TestGroupStudentModel:
         from apps.groups.models import GroupStudent
         group = create_group()
         student = create_student()
-        return GroupStudent.objects.create(group=group, student=student, **gs_kwargs)
+        return GroupStudent.objects.create(group=group, student=student, joined_date=date.today(), **gs_kwargs)
 
     def test_monthly_price_default(self, create_group, create_student):
         """Group actual_price ishlatiladi"""

@@ -71,6 +71,7 @@ def gs(april_group, create_student):
     return GroupStudent.objects.create(
         group=april_group,
         student=create_student(),
+        joined_date=date(2026, 4, 1),
         is_active=True,
         status='active',
     )
@@ -346,6 +347,7 @@ class TestPaymentAllocator:
         gs2 = GroupStudent.objects.create(
             group=gs.group,
             student=create_student(first_name="Vali", phone="+998901112299"),
+            joined_date=date(2026, 4, 1),
             is_active=True,
             status='active',
         )
@@ -504,6 +506,7 @@ class TestInvoiceService:
                     first_name=f"Student{i}",
                     phone=f"+99890{i}111111",
                 ),
+                joined_date=date(2026, 4, 1),
                 is_active=True,
                 status='active',
             )

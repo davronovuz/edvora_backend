@@ -107,7 +107,8 @@ class LeadViewSet(viewsets.ModelViewSet):
             group = get_object_or_404(Group, id=group_id)
             GroupStudent.objects.create(
                 group=group,
-                student=student
+                student=student,
+                joined_date=timezone.now().date(),
             )
 
         # Lead'ni yangilash

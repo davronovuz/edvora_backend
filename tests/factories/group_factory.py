@@ -29,5 +29,6 @@ class GroupStudentFactory(DjangoModelFactory):
 
     group = factory.SubFactory(GroupFactory)
     student = factory.SubFactory('tests.factories.student_factory.StudentFactory')
+    joined_date = factory.LazyFunction(timezone.now().date)
     is_active = True
     status = 'active'

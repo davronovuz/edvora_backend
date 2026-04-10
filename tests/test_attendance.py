@@ -19,7 +19,7 @@ class TestAttendanceCRUD:
     def test_create_attendance(self, authenticated_client, create_group, create_student):
         group = create_group()
         student = create_student()
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=timezone.now().date())
 
         data = {
             'group': str(group.id),
@@ -50,8 +50,8 @@ class TestBulkAttendance:
         group = create_group()
         s1 = create_student(phone='+998901111111')
         s2 = create_student(phone='+998902222222', first_name='Ali')
-        GroupStudent.objects.create(group=group, student=s1)
-        GroupStudent.objects.create(group=group, student=s2)
+        GroupStudent.objects.create(group=group, student=s1, joined_date=timezone.now().date())
+        GroupStudent.objects.create(group=group, student=s2, joined_date=timezone.now().date())
 
         data = {
             'group_id': str(group.id),
@@ -104,7 +104,7 @@ class TestAttendanceByGroup:
     def test_by_group(self, authenticated_client, create_group, create_student):
         group = create_group()
         student = create_student()
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=timezone.now().date())
 
         response = authenticated_client.get(
             f'/api/v1/attendance/by_group/?group_id={group.id}'
@@ -147,7 +147,7 @@ class TestAttendanceReport:
     def test_report(self, authenticated_client, create_group, create_student):
         group = create_group()
         student = create_student()
-        GroupStudent.objects.create(group=group, student=student)
+        GroupStudent.objects.create(group=group, student=student, joined_date=timezone.now().date())
 
         today = timezone.now().date()
         Attendance.objects.create(

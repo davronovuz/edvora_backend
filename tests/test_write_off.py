@@ -29,6 +29,7 @@ class TestWriteOffTask:
             'next_write_off_date': next_wo_date,
         }
         defaults.update(gs_kwargs)
+        defaults.setdefault('joined_date', date.today())
         gs = GroupStudent.objects.create(**defaults)
         return gs
 
@@ -149,7 +150,7 @@ class TestWriteOffModel:
 
         group = create_group()
         student = create_student()
-        gs = GroupStudent.objects.create(group=group, student=student)
+        gs = GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
 
         WriteOff.objects.create(
             student=student, group=group, group_student=gs,
@@ -170,7 +171,7 @@ class TestWriteOffModel:
 
         group = create_group()
         student = create_student()
-        gs = GroupStudent.objects.create(group=group, student=student)
+        gs = GroupStudent.objects.create(group=group, student=student, joined_date=date.today())
 
         wo = WriteOff.objects.create(
             student=student, group=group, group_student=gs,
