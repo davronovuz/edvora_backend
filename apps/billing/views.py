@@ -175,9 +175,21 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
         if invoice is None:
+            # Sabab: profil topilmadi yoki allaqachon mavjud
+            existing = Invoice.objects.filter(
+                group_student=gs,
+                period_year=ser.validated_data['year'],
+                period_month=ser.validated_data['month'],
+            ).exclude(status=Invoice.Status.CANCELLED).exists()
+
+            if existing:
+                return Response(
+                    {'detail': "Bu davr uchun invoice allaqachon mavjud"},
+                    status=status.HTTP_409_CONFLICT,
+                )
             return Response(
-                {'detail': "Bu davr uchun invoice allaqachon mavjud"},
-                status=status.HTTP_409_CONFLICT,
+                {'detail': "Billing profil topilmadi. Avval default profil yarating (Profillar tabida)."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         return Response(
