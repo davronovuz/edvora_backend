@@ -10,8 +10,15 @@ from .models import User
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Custom JWT token serializer
-    Token ichiga qo'shimcha ma'lumotlar qo'shish
+    Telefon raqam yoki email bilan login qilish
     """
+    username_field = 'phone'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Default 'email' fieldni olib tashlab, 'phone' qo'shamiz
+        self.fields.pop('email', None)
+        self.fields['phone'] = serializers.CharField(required=True)
 
     @classmethod
     def get_token(cls, user):
@@ -19,18 +26,52 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Custom claims
         token['email'] = user.email
+        token['phone'] = user.phone
         token['role'] = user.role
         token['full_name'] = user.full_name
 
         return token
 
     def validate(self, attrs):
-        data = super().validate(attrs)
+        phone = attrs.get('phone', '').strip()
+        password = attrs.get('password', '')
+
+        # Telefon raqam bo'yicha userni topish
+        try:
+            user = User.objects.get(phone=phone)
+        except User.DoesNotExist:
+            # Email bilan ham tekshiramiz (backward compatibility)
+            try:
+                user = User.objects.get(email=phone)
+            except User.DoesNotExist:
+                raise serializers.ValidationError(
+                    {'detail': "Telefon raqam yoki parol noto'g'ri"}
+                )
+
+        if not user.check_password(password):
+            raise serializers.ValidationError(
+                {'detail': "Telefon raqam yoki parol noto'g'ri"}
+            )
+
+        if not user.is_active:
+            raise serializers.ValidationError(
+                {'detail': "Foydalanuvchi faol emas"}
+            )
+
+        # Token yaratish
+        refresh = self.get_token(user)
+        self.user = user
+
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
 
         # Response'ga qo'shimcha ma'lumotlar
         data['user'] = {
             'id': str(self.user.id),
             'email': self.user.email,
+            'phone': self.user.phone,
             'full_name': self.user.full_name,
             'role': self.user.role,
             'permissions': self.user.get_permissions_dict(),

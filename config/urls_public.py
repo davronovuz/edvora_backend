@@ -1,9 +1,10 @@
 
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.http import JsonResponse
 from apps.leads.views import DemoRequestViewSet
+from apps.shared.views import tenant_info
 
 
 def home(request):
@@ -21,4 +22,7 @@ urlpatterns = [
         'post': 'create',
         'get': 'list',
     }), name='demo-requests'),
+
+    # Tenant info (public - login sahifasi uchun)
+    path('api/v1/tenant-info/', tenant_info, name='tenant-info'),
 ]

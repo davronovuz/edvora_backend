@@ -23,9 +23,27 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 
 class SubjectCreateSerializer(serializers.ModelSerializer):
+    slug = serializers.SlugField(required=False)
+
     class Meta:
         model = Subject
         fields = ['name', 'slug', 'description', 'icon', 'color', 'is_active']
+
+    def validate(self, attrs):
+        """Slug avtomatik yaratish"""
+        from django.utils.text import slugify
+        import time
+
+        name = attrs.get('name', '')
+        if not attrs.get('slug'):
+            base_slug = slugify(name) or f'subject-{int(time.time())}'
+            slug = base_slug
+            counter = 1
+            while Subject.objects.filter(slug=slug).exists():
+                slug = f'{base_slug}-{counter}'
+                counter += 1
+            attrs['slug'] = slug
+        return attrs
 
 
 class CourseSerializer(serializers.ModelSerializer):

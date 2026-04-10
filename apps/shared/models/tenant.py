@@ -64,6 +64,17 @@ class Tenant(TenantMixin, TimeStampedModel):
         null=True,
         verbose_name="Logo"
     )
+    login_background = models.ImageField(
+        upload_to='tenants/backgrounds/',
+        blank=True,
+        null=True,
+        verbose_name="Login fon rasmi"
+    )
+    primary_color = models.CharField(
+        max_length=7,
+        default='#1e40af',
+        verbose_name="Asosiy rang"
+    )
 
     # Obuna
     plan = models.ForeignKey(
