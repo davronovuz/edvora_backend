@@ -571,6 +571,7 @@ class Invoice(BaseModel):
         constraints = [
             models.UniqueConstraint(
                 fields=['group_student', 'period_year', 'period_month'],
+                condition=~models.Q(status='cancelled'),
                 name='unique_invoice_per_period'
             ),
         ]

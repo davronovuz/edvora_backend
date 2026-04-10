@@ -352,9 +352,19 @@ class TestInvoice:
         assert inv.total_amount == Decimal("0")
 
     def test_unique_per_period(self, billing_profile, group_student):
+        """Non-cancelled invoicelar uchun unique constraint."""
         self._make_invoice(billing_profile, group_student)
         with pytest.raises(IntegrityError):
             self._make_invoice(billing_profile, group_student)
+
+    def test_unique_per_period_allows_cancelled(self, billing_profile, group_student):
+        """Cancelled invoice bo'lsa yangi yaratish mumkin."""
+        inv1 = self._make_invoice(billing_profile, group_student)
+        inv1.status = Invoice.Status.CANCELLED
+        inv1.save()
+        # Endi yangi yaratish imkoni bor
+        inv2 = self._make_invoice(billing_profile, group_student)
+        assert inv2.pk != inv1.pk
 
     def test_recompute_status_unpaid(self, billing_profile, group_student):
         inv = self._make_invoice(
