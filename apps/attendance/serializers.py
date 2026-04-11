@@ -37,10 +37,10 @@ class BulkAttendanceSerializer(serializers.Serializer):
     date = serializers.DateField()
     attendances = serializers.ListField(
         child=serializers.DictField(
-            child=serializers.CharField()
+            child=serializers.CharField(allow_blank=True)
         )
     )
-    # attendances: [{"student_id": "uuid", "status": "present", "note": ""}]
+    # attendances: [{"student_id": "uuid", "status": "present"}]
 
 
 class AttendanceSessionSerializer(serializers.ModelSerializer):
