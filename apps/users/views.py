@@ -169,6 +169,18 @@ class UserViewSet(viewsets.ModelViewSet):
 
         user = serializer.save()
 
+        # Teacher role bo'lsa avtomatik teacher profil yaratish
+        if user.role == 'teacher':
+            from apps.teachers.models import Teacher
+            if not hasattr(user, 'teacher_profile') or not user.teacher_profile:
+                Teacher.objects.create(
+                    user=user,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    phone=user.phone or '',
+                    status='active',
+                )
+
         return Response({
             'success': True,
             'data': UserSerializer(user).data,
