@@ -35,7 +35,7 @@ class DashboardViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, RoleBasedPermission]
 
     role_permissions = {
-        'summary': ['owner', 'admin'],
+        'summary': ['owner', 'admin', 'teacher', 'accountant', 'registrar'],
         'students_chart': ['owner', 'admin'],
         'finance_chart': ['owner', 'admin', 'accountant'],
         'attendance_chart': ['owner', 'admin', 'teacher'],
@@ -55,8 +55,13 @@ class DashboardViewSet(viewsets.ViewSet):
 
         GET /api/v1/analytics/dashboard/summary/
         """
+        user = request.user
         today = timezone.now().date()
         month_start = today.replace(day=1)
+
+        # Teacher uchun alohida summary
+        if user.role == 'teacher':
+            return self._teacher_summary(user, today, month_start)
 
         # O'quvchilar
         students_total = Student.objects.count()
@@ -162,6 +167,91 @@ class DashboardViewSet(viewsets.ViewSet):
                     'today_present': attendance_present,
                     'rate': attendance_rate
                 }
+            }
+        })
+
+    def _teacher_summary(self, user, today, month_start):
+        """Teacher uchun maxsus dashboard summary"""
+        teacher_profile = getattr(user, 'teacher_profile', None)
+
+        if not teacher_profile:
+            return Response({
+                'success': True,
+                'data': {
+                    'is_teacher': True,
+                    'no_profile': True,
+                    'my_groups': [],
+                    'groups': {'total': 0, 'active': 0},
+                    'students': {'total': 0},
+                    'attendance': {'today_total': 0, 'today_present': 0, 'rate': 0},
+                }
+            })
+
+        # O'z guruhlari
+        my_groups = Group.objects.filter(teacher=teacher_profile, status='active')
+        my_group_ids = list(my_groups.values_list('id', flat=True))
+
+        # O'z o'quvchilari
+        my_students_count = GroupStudent.objects.filter(
+            group__in=my_groups, is_active=True
+        ).values('student').distinct().count()
+
+        # Bugungi davomat (faqat o'z guruhlari)
+        today_att = Attendance.objects.filter(date=today, group__in=my_groups)
+        att_total = today_att.count()
+        att_present = today_att.filter(status__in=['present', 'late']).count()
+        att_rate = round((att_present / att_total * 100) if att_total > 0 else 0, 1)
+
+        # Shu oydagi davomat umumiy
+        month_att = Attendance.objects.filter(
+            date__gte=month_start, date__lte=today, group__in=my_groups
+        )
+        month_att_total = month_att.count()
+        month_att_present = month_att.filter(status__in=['present', 'late']).count()
+        month_rate = round((month_att_present / month_att_total * 100) if month_att_total > 0 else 0, 1)
+
+        # Guruhlar tafsiloti
+        groups_data = []
+        for g in my_groups.select_related('course', 'room'):
+            g_students = GroupStudent.objects.filter(group=g, is_active=True).count()
+            g_att = Attendance.objects.filter(date=today, group=g)
+            g_att_total = g_att.count()
+            g_att_present = g_att.filter(status__in=['present', 'late']).count()
+            g_marked = g_att_total > 0
+
+            groups_data.append({
+                'id': str(g.id),
+                'name': g.name,
+                'course_name': g.course.name if g.course else '',
+                'room_name': g.room.name if g.room else '',
+                'students_count': g_students,
+                'max_students': g.max_students,
+                'days': g.days,
+                'start_time': str(g.start_time) if g.start_time else '',
+                'end_time': str(g.end_time) if g.end_time else '',
+                'today_marked': g_marked,
+                'today_present': g_att_present,
+                'today_total': g_att_total,
+            })
+
+        return Response({
+            'success': True,
+            'data': {
+                'is_teacher': True,
+                'groups': {
+                    'total': my_groups.count(),
+                    'active': my_groups.count(),
+                },
+                'students': {
+                    'total': my_students_count,
+                },
+                'attendance': {
+                    'today_total': att_total,
+                    'today_present': att_present,
+                    'rate': att_rate,
+                    'month_rate': month_rate,
+                },
+                'my_groups': groups_data,
             }
         })
 
