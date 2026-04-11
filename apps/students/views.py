@@ -55,6 +55,20 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Student.objects.all()
+        user = self.request.user
+
+        # Teacher faqat o'z guruhlaridagi o'quvchilarni ko'radi
+        if user.role == 'teacher':
+            teacher_profile = getattr(user, 'teacher_profile', None)
+            if teacher_profile:
+                from apps.groups.models import GroupStudent
+                student_ids = GroupStudent.objects.filter(
+                    group__teacher=teacher_profile,
+                    is_active=True,
+                ).values_list('student_id', flat=True).distinct()
+                queryset = queryset.filter(id__in=student_ids)
+            else:
+                queryset = queryset.none()
 
         # Qarzdorlar filtri
         has_debt = self.request.query_params.get('has_debt')

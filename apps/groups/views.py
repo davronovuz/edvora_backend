@@ -51,8 +51,12 @@ class GroupViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if user.role == 'teacher' and hasattr(user, 'teacher_profile'):
-            qs = qs.filter(teacher=user.teacher_profile)
+        if user.role == 'teacher':
+            teacher_profile = getattr(user, 'teacher_profile', None)
+            if teacher_profile:
+                qs = qs.filter(teacher=teacher_profile)
+            else:
+                qs = qs.none()
         return qs
 
     def get_serializer_class(self):

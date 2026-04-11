@@ -53,15 +53,20 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if user.role == 'teacher' and hasattr(user, 'teacher_profile'):
-            qs = qs.filter(group__teacher=user.teacher_profile)
+        if user.role == 'teacher':
+            teacher_profile = getattr(user, 'teacher_profile', None)
+            if teacher_profile:
+                qs = qs.filter(group__teacher=teacher_profile)
+            else:
+                qs = qs.none()
         return qs
 
     def _check_teacher_group_access(self, group):
         """Teacher faqat o'z guruhiga access olsin"""
         user = self.request.user
         if user.role == 'teacher':
-            if not hasattr(user, 'teacher_profile') or group.teacher_id != user.teacher_profile.id:
+            teacher_profile = getattr(user, 'teacher_profile', None)
+            if not teacher_profile or group.teacher_id != teacher_profile.id:
                 return False
         return True
 
