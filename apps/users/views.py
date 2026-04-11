@@ -153,7 +153,20 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            # Xatolarni odam tushunadigan formatda qaytarish
+            errors = serializer.errors
+            first_error = None
+            for field, msgs in errors.items():
+                msg = msgs[0] if isinstance(msgs, list) else str(msgs)
+                first_error = f"{field}: {msg}"
+                break
+            return Response({
+                'success': False,
+                'error': {'message': first_error or "Xatolik yuz berdi"},
+                'details': errors,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         user = serializer.save()
 
         return Response({
