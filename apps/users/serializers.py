@@ -103,6 +103,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
 
     class Meta:
         model = User
@@ -116,6 +117,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'password_confirm': "Parollar mos kelmadi"
             })
+        # Email bo'sh bo'lsa — telefon asosida auto-generate
+        if not attrs.get('email'):
+            phone = attrs.get('phone', '').replace('+', '').replace(' ', '')
+            attrs['email'] = f"{phone}@user.local"
         return attrs
 
     def create(self, validated_data):
