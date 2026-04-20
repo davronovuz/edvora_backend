@@ -410,67 +410,112 @@ class FinanceDashboardView(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def summary(self, request):
         """
-        Moliyaviy xulosa
+        Moliyaviy xulosa — joriy oy, o'tgan oy va umumiy (all-time) ma'lumotlar.
 
         GET /api/v1/finance/dashboard/summary/?period=month
         """
+        from apps.billing.models import Invoice
+
         period = request.query_params.get('period', 'month')
         today = timezone.now().date()
 
         if period == 'today':
             start_date = today
             end_date = today
+            prev_start = today - timedelta(days=1)
+            prev_end = today - timedelta(days=1)
         elif period == 'week':
             start_date = today - timedelta(days=7)
             end_date = today
-        elif period == 'month':
-            start_date = today.replace(day=1)
-            end_date = today
+            prev_start = today - timedelta(days=14)
+            prev_end = today - timedelta(days=8)
         elif period == 'year':
             start_date = today.replace(month=1, day=1)
             end_date = today
+            prev_start = start_date.replace(year=start_date.year - 1)
+            prev_end = today.replace(year=today.year - 1)
         else:
-            start_date = request.query_params.get('start_date', today.replace(day=1))
-            end_date = request.query_params.get('end_date', today)
+            # month (default)
+            start_date = today.replace(day=1)
+            end_date = today
+            if start_date.month == 1:
+                prev_start = start_date.replace(year=start_date.year - 1, month=12, day=1)
+            else:
+                prev_start = start_date.replace(month=start_date.month - 1)
+            # Previous period end = last day of previous month
+            prev_end = start_date - timedelta(days=1)
 
-        # Daromad (to'lovlar)
-        total_income = Payment.objects.filter(
-            status='completed',
-            created_at__date__gte=start_date,
-            created_at__date__lte=end_date
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        def _totals(s, e):
+            income = Payment.objects.filter(
+                status='completed',
+                created_at__date__gte=s,
+                created_at__date__lte=e,
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            expense = Expense.objects.filter(
+                status='paid',
+                expense_date__gte=s,
+                expense_date__lte=e,
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            salary = Salary.objects.filter(
+                status='paid',
+                paid_at__date__gte=s,
+                paid_at__date__lte=e,
+            ).aggregate(total=Sum('total'))['total'] or Decimal('0')
+            return income, expense, salary
 
-        # Xarajatlar
-        total_expense = Expense.objects.filter(
-            status='paid',
-            expense_date__gte=start_date,
-            expense_date__lte=end_date
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
-        # Ish haqlari
-        total_salary = Salary.objects.filter(
-            status='paid',
-            paid_at__date__gte=start_date,
-            paid_at__date__lte=end_date
-        ).aggregate(total=Sum('total'))['total'] or Decimal('0')
-
-        # Sof foyda
+        total_income, total_expense, total_salary = _totals(start_date, end_date)
         net_profit = total_income - total_expense - total_salary
+
+        prev_income, prev_expense, prev_salary = _totals(prev_start, prev_end)
+        prev_profit = prev_income - prev_expense - prev_salary
+
+        # Umumiy (all-time)
+        at_income = Payment.objects.filter(status='completed').aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        at_expense = Expense.objects.filter(status='paid').aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        at_salary = Salary.objects.filter(status='paid').aggregate(t=Sum('total'))['t'] or Decimal('0')
+
+        # Kutilayotgan / qarz (invoice asosida, barcha faol invoicelar)
+        inv_qs = Invoice.objects.exclude(status=Invoice.Status.CANCELLED)
+        inv_expected = inv_qs.aggregate(t=Sum('total_amount'))['t'] or Decimal('0')
+        inv_collected = inv_qs.aggregate(t=Sum('paid_amount'))['t'] or Decimal('0')
+
+        def _delta_pct(curr, prev):
+            if prev and prev != 0:
+                return round(float((curr - prev) / abs(prev) * 100), 1)
+            return None
 
         return Response({
             'success': True,
             'data': {
-                'period': {
-                    'start': str(start_date),
-                    'end': str(end_date)
-                },
+                'period': {'start': str(start_date), 'end': str(end_date)},
+                'previous_period': {'start': str(prev_start), 'end': str(prev_end)},
                 'total_income': total_income,
                 'total_expense': total_expense,
                 'total_salary': total_salary,
                 'net_profit': net_profit,
                 'profit_margin': round(
                     (net_profit / total_income * 100) if total_income > 0 else 0, 2
-                )
+                ),
+                'previous': {
+                    'total_income': prev_income,
+                    'total_expense': prev_expense,
+                    'total_salary': prev_salary,
+                    'net_profit': prev_profit,
+                },
+                'trend': {
+                    'income_pct': _delta_pct(total_income, prev_income),
+                    'expense_pct': _delta_pct(total_expense, prev_expense),
+                    'salary_pct': _delta_pct(total_salary, prev_salary),
+                    'profit_pct': _delta_pct(net_profit, prev_profit),
+                },
+                'all_time': {
+                    'total_income': at_income,
+                    'total_expense': at_expense,
+                    'total_salary': at_salary,
+                    'net_profit': at_income - at_expense - at_salary,
+                },
+                'expected_income': inv_expected,
+                'total_debt': inv_expected - inv_collected,
             }
         })
 

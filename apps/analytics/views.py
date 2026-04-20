@@ -111,13 +111,23 @@ class DashboardViewSet(viewsets.ViewSet):
             (attendance_present / attendance_total * 100) if attendance_total > 0 else 0, 1
         )
 
-        # Billing (yangi invoice tizimi)
-        billing_qs = Invoice.objects.filter(
+        # Billing — joriy oy uchun kutilayotgan/yig'ilgan,
+        # qarz esa barcha to'lanmagan invoicelardan hisoblanadi.
+        from django.db.models import F
+        billing_month_qs = Invoice.objects.filter(
             period_year=today.year, period_month=today.month,
         ).exclude(status=Invoice.Status.CANCELLED)
 
-        billing_expected = billing_qs.aggregate(s=Sum('total_amount'))['s'] or Decimal('0')
-        billing_collected = billing_qs.aggregate(s=Sum('paid_amount'))['s'] or Decimal('0')
+        billing_expected = billing_month_qs.aggregate(s=Sum('total_amount'))['s'] or Decimal('0')
+        billing_collected = billing_month_qs.aggregate(s=Sum('paid_amount'))['s'] or Decimal('0')
+
+        # Barcha ochiq invoicelar bo'yicha qarz (oyga bog'liq emas)
+        billing_debt = Invoice.objects.filter(
+            status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIAL, Invoice.Status.OVERDUE],
+        ).aggregate(
+            t=Sum(F('total_amount') - F('paid_amount'))
+        )['t'] or Decimal('0')
+
         billing_overdue = Invoice.objects.filter(
             status=Invoice.Status.OVERDUE,
         ).count()
@@ -151,7 +161,7 @@ class DashboardViewSet(viewsets.ViewSet):
                 'billing': {
                     'expected': billing_expected,
                     'collected': billing_collected,
-                    'debt': billing_expected - billing_collected,
+                    'debt': billing_debt,
                     'collection_rate': billing_collection_rate,
                     'overdue_count': billing_overdue,
                 },
@@ -471,20 +481,20 @@ class DashboardViewSet(viewsets.ViewSet):
 
         GET /api/v1/analytics/dashboard/top_groups/
         """
-        groups = Group.objects.filter(status='active').annotate(
-            students_count=Count('students', filter=Q(students__is_active=True))
-        ).order_by('-students_count')[:10]
+        groups = Group.objects.filter(status='active').select_related('course', 'teacher').annotate(
+            active_students=Count('students', filter=Q(students__is_active=True))
+        ).order_by('-active_students')[:10]
 
         data = []
         for g in groups:
             data.append({
                 'id': str(g.id),
                 'name': g.name,
-                'course': g.course.name,
+                'course': g.course.name if g.course else '',
                 'teacher': g.teacher.full_name if g.teacher else None,
-                'students_count': g.students_count,
+                'students_count': g.active_students,
                 'max_students': g.max_students,
-                'fill_rate': round((g.students_count / g.max_students * 100) if g.max_students > 0 else 0, 1)
+                'fill_rate': round((g.active_students / g.max_students * 100) if g.max_students > 0 else 0, 1)
             })
 
         return Response({
