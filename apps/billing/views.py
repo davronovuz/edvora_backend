@@ -36,6 +36,7 @@ from .serializers import (
 )
 from .services.invoice_service import InvoiceService
 from .services.payment_allocator import PaymentAllocator
+from .filters import InvoiceFilter
 
 
 class BillingProfileViewSet(viewsets.ModelViewSet):
@@ -147,7 +148,7 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
     ).all()
     permission_classes = [IsAuthenticated, RoleBasedPermission]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'student', 'group', 'period_year', 'period_month']
+    filterset_class = InvoiceFilter
     search_fields = ['number', 'student__first_name', 'student__last_name', 'group__name']
     ordering_fields = ['period_year', 'period_month', 'due_date', 'total_amount', 'created_at']
 
@@ -261,13 +262,15 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'])
     def debtors(self, request):
-        """Qarzdorlar ro'yxati."""
+        """Qarzdorlar ro'yxati — telefon va guruhlar bilan."""
         from django.db.models import Sum, F
+        from apps.students.models import Student
+        from apps.groups.models import GroupStudent
 
-        overdue = (
+        aggregates = (
             Invoice.objects
             .filter(status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIAL, Invoice.Status.OVERDUE])
-            .values('student__id', 'student__first_name', 'student__last_name')
+            .values('student_id')
             .annotate(
                 total_debt=Sum(F('total_amount') - F('paid_amount')),
                 invoice_count=Count('id'),
@@ -276,7 +279,42 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
             .order_by('-total_debt')[:50]
         )
 
-        return Response(list(overdue))
+        student_ids = [a['student_id'] for a in aggregates]
+        students = {
+            str(s.id): s
+            for s in Student.objects.filter(id__in=student_ids)
+        }
+
+        gs_qs = (
+            GroupStudent.objects
+            .filter(student_id__in=student_ids, status=GroupStudent.Status.ACTIVE)
+            .select_related('group')
+        )
+        groups_by_student = {}
+        for gs in gs_qs:
+            groups_by_student.setdefault(str(gs.student_id), []).append({
+                'id': str(gs.group.id),
+                'name': gs.group.name,
+                'monthly_price': str(gs.monthly_price or 0),
+            })
+
+        result = []
+        for row in aggregates:
+            sid = str(row['student_id'])
+            student = students.get(sid)
+            if not student:
+                continue
+            result.append({
+                'student_id': sid,
+                'student_name': student.full_name,
+                'student_phone': student.phone or None,
+                'parent_phone': student.parent_phone or None,
+                'groups': groups_by_student.get(sid, []),
+                'total_debt': str(row['total_debt']),
+                'invoice_count': row['invoice_count'],
+            })
+
+        return Response(result)
 
     @action(detail=False, methods=['get'])
     def summary(self, request):

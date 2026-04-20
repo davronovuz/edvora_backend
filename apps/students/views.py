@@ -188,6 +188,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         for gs in groups:
             data.append({
                 'id': str(gs.group.id),
+                'group_student_id': str(gs.id),
                 'name': gs.group.name,
                 'course': gs.group.course.name,
                 'teacher': gs.group.teacher.full_name if gs.group.teacher else None,
@@ -195,6 +196,7 @@ class StudentViewSet(viewsets.ModelViewSet):
                 'time': f"{gs.group.start_time.strftime('%H:%M')} - {gs.group.end_time.strftime('%H:%M')}",
                 'monthly_price': gs.monthly_price,
                 'joined_date': gs.joined_date,
+                'status': gs.status,
             })
 
         return Response({
