@@ -3,7 +3,7 @@ Edvora - Attendance Serializers
 """
 
 from rest_framework import serializers
-from .models import Attendance, AttendanceSession, Holiday
+from .models import Attendance, AttendanceSession, Holiday, LessonGrade
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -70,6 +70,34 @@ class AttendanceReportSerializer(serializers.Serializer):
     absent_days = serializers.IntegerField()
     late_days = serializers.IntegerField()
     attendance_rate = serializers.FloatField()
+
+
+class LessonGradeSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    graded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LessonGrade
+        fields = [
+            'id', 'group', 'student', 'student_name',
+            'date', 'score', 'note',
+            'graded_by', 'graded_by_name',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'graded_by']
+
+    def get_graded_by_name(self, obj):
+        return obj.graded_by.full_name if obj.graded_by else None
+
+
+class LessonGradeBulkSerializer(serializers.Serializer):
+    """Bir dars uchun bir nechta o'quvchi bahosi"""
+    date = serializers.DateField()
+    grades = serializers.ListField(
+        child=serializers.DictField(),
+        allow_empty=False,
+    )
+    # grades: [{"student_id": "uuid", "score": 4.5, "note": ""}]
 
 
 class HolidaySerializer(serializers.ModelSerializer):

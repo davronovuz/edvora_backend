@@ -238,3 +238,52 @@ class Student(BaseModel):
         self.archive_reason = reason
         self.archived_at = timezone.now()
         self.save()
+
+
+class StudentGroupNote(BaseModel):
+    """
+    O'quvchi uchun guruh ichidagi izoh (xulq, progress, ota-ona bilan aloqa)
+    """
+
+    class NoteType(models.TextChoices):
+        BEHAVIOR = 'behavior', "Xulq"
+        PROGRESS = 'progress', "O'zlashtirish"
+        PARENT_CONTACT = 'parent_contact', "Ota-ona bilan aloqa"
+        OTHER = 'other', "Boshqa"
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='group_notes',
+        verbose_name="O'quvchi",
+    )
+    group = models.ForeignKey(
+        'groups.Group',
+        on_delete=models.CASCADE,
+        related_name='student_notes',
+        verbose_name="Guruh",
+    )
+    note_type = models.CharField(
+        max_length=20,
+        choices=NoteType.choices,
+        default=NoteType.OTHER,
+        verbose_name="Turi",
+    )
+    content = models.TextField(verbose_name="Mazmun")
+    is_pinned = models.BooleanField(default=False, verbose_name="Tepada")
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='authored_group_notes',
+        verbose_name="Kim yozdi",
+    )
+
+    class Meta:
+        verbose_name = "Guruh izohi"
+        verbose_name_plural = "Guruh izohlari"
+        ordering = ['-is_pinned', '-created_at']
+
+    def __str__(self):
+        return f"{self.student.full_name} — {self.group.name} — {self.get_note_type_display()}"

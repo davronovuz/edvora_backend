@@ -3,7 +3,7 @@ Edvora - Students Serializers
 """
 
 from rest_framework import serializers
-from .models import Student
+from .models import Student, StudentGroupNote
 from .tags import Tag, TaggedItem
 
 
@@ -83,3 +83,23 @@ class TaggedItemSerializer(serializers.Serializer):
     tag_id = serializers.UUIDField()
     model_type = serializers.ChoiceField(choices=['student', 'group', 'lead'])
     object_id = serializers.UUIDField()
+
+
+class StudentGroupNoteSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    group_name = serializers.CharField(source='group.name', read_only=True)
+    note_type_display = serializers.CharField(source='get_note_type_display', read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StudentGroupNote
+        fields = [
+            'id', 'student', 'student_name', 'group', 'group_name',
+            'note_type', 'note_type_display', 'content', 'is_pinned',
+            'created_by', 'created_by_name',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+
+    def get_created_by_name(self, obj):
+        return obj.created_by.full_name if obj.created_by else None

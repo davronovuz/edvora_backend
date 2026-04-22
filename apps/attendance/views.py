@@ -33,7 +33,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = Attendance.objects.select_related('group', 'student', 'marked_by').all()
     permission_classes = [IsAuthenticated, RoleBasedPermission]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['group', 'student', 'status', 'date']
+    filterset_fields = {
+        'group': ['exact'],
+        'student': ['exact'],
+        'status': ['exact'],
+        'date': ['exact', 'gte', 'lte'],
+    }
     ordering_fields = ['date', 'created_at']
     ordering = ['-date']
 

@@ -3,6 +3,7 @@ Edvora - Attendance Model
 Davomat qayd qilish
 """
 
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from core.models import BaseModel
 
@@ -194,3 +195,48 @@ class Holiday(BaseModel):
         ).filter(
             models.Q(end_date__gte=check_date) | models.Q(end_date__isnull=True, date=check_date)
         ).exists()
+
+
+class LessonGrade(BaseModel):
+    """
+    Dars uchun baho (1-5, 0.5 qadam bilan)
+    O'qituvchi har bir dars uchun tezkor baho qo'yadi (davomat bilan birga)
+    """
+
+    group = models.ForeignKey(
+        'groups.Group',
+        on_delete=models.CASCADE,
+        related_name='lesson_grades',
+        verbose_name="Guruh",
+    )
+    student = models.ForeignKey(
+        'students.Student',
+        on_delete=models.CASCADE,
+        related_name='lesson_grades',
+        verbose_name="O'quvchi",
+    )
+    date = models.DateField(verbose_name="Dars sanasi")
+    score = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name="Baho (0-5)",
+    )
+    note = models.TextField(blank=True, null=True, verbose_name="Izoh")
+    graded_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lesson_grades_given',
+        verbose_name="Kim bahoni qo'ydi",
+    )
+
+    class Meta:
+        verbose_name = "Dars bahosi"
+        verbose_name_plural = "Dars baholari"
+        unique_together = ['group', 'student', 'date']
+        ordering = ['-date', 'student__first_name']
+
+    def __str__(self):
+        return f"{self.student.full_name} — {self.date} — {self.score}/5"
